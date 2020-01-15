@@ -1,0 +1,72 @@
+variables:
+  FLASK_APP: simpleblog
+#  FLASK_ENV: development
+
+before_script:
+  - python3 --version
+
+stages:
+  - build
+  - test
+  - deploy
+
+build:
+  stage: build
+  tags:
+    - python
+  script:
+    - echo "Build 'Simple Blog'"
+    - python3 -m venv venv
+    - . venv/bin/activate
+    - pip3 install Flask wheel
+    - flask init-db
+    - pip3 install -e . 
+    - python3 setup.py bdist_wheel
+    - cp ./dist/simpleblog-1.0.0-py3-none-any.whl /tmp/simpleblog-1.0.0-py3-none-any.whl
+  only:
+    - master
+    - tags
+
+test:
+  stage: test
+  tags:
+    - python
+  script: 
+    - echo "Test project"
+    - python3 -m venv venv
+    - . venv/bin/activate
+    - pip3 install --force-reinstall /tmp/simpleblog-1.0.0-py3-none-any.whl
+    - pip3 install pytest coverage
+    - pytest
+    - coverage run -m pytest 
+    - coverage report
+    - coverage html
+  only:
+    - master
+    - tags
+
+deploy_staging:
+  stage: deploy
+  tags:
+    - python
+  script:
+    - echo "Deploy to staging server"
+    - mkdir -p /tmp/simpleblog
+    - cd "/tmp/simpleblog"
+    - python3 -m venv venv
+    - . venv/bin/activate
+    - pip3 install --force-reinstall /tmp/simpleblog-1.0.0-py3-none-any.whl
+    - pip3 install waitress
+    - flask init-db
+    - find . -name "simpleblog.sqlite" -ls
+    - echo "Simple Blog ready to execute with this command:"
+    - echo "nohup waitress-serve --url-scheme=http --listen=192.168.0.61:8071 --no-ipv6 --call simpleblog:create_app &"
+#    - sleep 5
+#    - curl -L http://192.168.0.61:8071/hello
+  environment:
+    name: staging
+    url: http://192.168.0.61:8071
+  only:
+    - master
+    - tags
+  when: on_success

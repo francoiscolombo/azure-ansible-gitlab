@@ -1,0 +1,242 @@
+---
+- hosts: gitlab-server
+  remote_user: admgitlab
+  vars:
+    gitlab_root_password: "{{ lookup('env','GITLAB_ROOT_PASSWORD') }}"
+    gitlab_user_password: "{{ lookup('env','GITLAB_USER_PASSWORD') }}"
+
+  tasks:
+    - debug: var=gitlab_root_password
+    - debug: var=gitlab_user_password
+
+    - name: get gitlab token
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/oauth/token"
+        method: POST
+        #validate_certs: no
+        follow_redirects: all
+        body:
+          grant_type: "password"
+          username: "root"
+          password: "{{ gitlab_root_password }}"
+        return_content: yes
+        body_format: json
+      register: token_output
+
+    - debug: var=token_output.json.access_token
+
+    - name: create user 'fcolombo'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/users"
+        method: POST
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        body:
+          email: "francois_colombo@yahoo.fr"
+          password: "{{ gitlab_user_password }}"
+          reset_password: "false"
+          username: "fcolombo"
+          name: "Francois Colombo"
+          organization: "Keyteo"
+          projects_limit: "11"
+          bio: "Francois is a former Middleware Architect who evolve naturally to DevOps principle. This guy is really a nice guy, for sure you can have a beer with him."
+          location: "Switzerland"
+          public_email: "francois_colombo@yahoo.fr"
+          admin: "false"
+          can_create_group: "false"
+          skip_confirmation: "true"
+          private_profile: "false"
+        return_content: yes
+        body_format: json
+        # 201: non existing, create it ; 409: conflict, meaning that the user already exists
+        status_code: "201,409"
+      register: user_output
+
+    - debug: var=user_output.json
+
+    - name: create group 'Python Projects'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/groups"
+        method: POST
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        body:
+          name: "Python Projects"
+          path: "python_projects"
+          description: "Register you python projects with this group"
+          visibility: "internal"
+          lfs_enabled: "false"
+          request_access_createenabled: "true"
+        return_content: yes
+        body_format: json
+        # 201: non existing, create it ; 409: conflict, meaning that the user already exists
+        status_code: "201,400"
+      register: group_output
+
+    - debug: var=group_output.json
+
+    - name: search group 'Python Projects'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/groups?search=python_projects"
+        method: GET
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        return_content: yes
+        status_code: 200
+      register: python_group_output
+
+    - debug: var=python_group_output.json[0].id
+
+    - name: search user 'fcolombo'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/users?username=fcolombo"
+        method: GET
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        return_content: yes
+        status_code: 200
+      register: user_search_output
+
+    - debug: var=user_search_output.json[0].id
+
+    - name: add user 'fcolombo' to group 'Python projects'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/groups/{{ python_group_output.json[0].id }}/members"
+        method: POST
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        body:
+          user_id: "{{ user_search_output.json[0].id }}"
+          access_level: 40
+        return_content: yes
+        body_format: json
+        # 201: non existing, create it ; 409: conflict, meaning that the user already exists
+        status_code: "201,409"
+      register: member_output
+
+    - debug: var=member_output.json
+
+    - name: search namespace for group 'Python projects'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/namespaces?search=python_projects"
+        method: GET
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        return_content: yes
+        body_format: json
+        # 201: non existing, create it ; 409: conflict, meaning that the user already exists
+        status_code: 200
+      register: namespace_output
+
+    - debug: var=namespace_output.json[0].id
+
+    - name: create project 'Simple Blog'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/projects"
+        method: POST
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        body:
+          name: "Very Simple Blog"
+          path: "simpleblog"
+          namespace_id: "{{ namespace_output.json[0].id }}"
+          description: "This is a very simple Flask application"
+          issues_enabled: "true"
+          merge_requests_enabled: "true"
+          jobs_enabled: "true"
+          wiki_enabled: "true"
+          snippets_enabled: "true"
+          resolve_outdated_diff_discussions: "false"
+          container_registry_enabled: "false"
+          shared_runners_enabled: "true"
+          visibility: "internal"
+          public_jobs: "true"
+          only_allow_merge_if_pipeline_succeeds: "true"
+          only_allow_merge_if_all_discussions_are_resolved: "false"
+          merge_method: "ff"
+          lfs_enabled: "false"
+          request_access_enabled: "true"
+          printing_merge_request_link_enabled: "true"
+          initialize_with_readme: "false"
+          tag_list:
+            - python
+        return_content: yes
+        body_format: json
+        # 201: non existing, create it ; 409: conflict, meaning that the user already exists
+        status_code: "201,400"
+      register: member_output
+
+    - debug: var=member_output.json
+
+    - name: Check "curl" package
+      apt:
+        name: curl
+        force_apt_get: yes
+        state: latest
+      become: true
+
+    - name: Download script.deb.sh
+      get_url:
+        url: https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh
+        dest: /tmp/script.deb.sh
+        mode: 0755
+    
+    - name: execute script.deb.sh
+      shell: /tmp/script.deb.sh
+      become: true
+
+    - name: Check "gitlab-runner" package
+      apt:
+        name: gitlab-runner
+        force_apt_get: yes
+        state: latest
+      become: true
+
+    - name: register runner with project 'Simple Blog'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/application/settings"
+        method: GET
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        return_content: yes
+        status_code: 200
+      register: token_runner_output
+
+    - debug: var=token_runner_output.json.runners_registration_token
+
+    - name: create a specific runner for project 'Simple Blog'
+      uri:
+        url: "http://keyteo-gitlab.westeurope.cloudapp.azure.com/api/v4/runners"
+        method: POST
+        #validate_certs: no
+        headers:
+          Authorization: "Bearer {{ token_output.json.access_token }}"
+        follow_redirects: all
+        body:
+          token: "{{ token_runner_output.json.runners_registration_token }}"
+          description: "Specific Runner for Project Simple Blog"
+          tag_list:
+            - python
+          active: "true"
+        return_content: yes
+        body_format: json
+        status_code: "201"
+      register: runner_output
+
+    - debug: var=runner_output.json

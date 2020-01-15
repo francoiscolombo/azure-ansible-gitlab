@@ -1,0 +1,4 @@
+include simpleblog/schema.sql
+graft simpleblog/static
+graft simpleblog/templates
+global-exclude *.pyc

@@ -1,0 +1,1 @@
+this module simply create a resource group name, and initialize the provider.

@@ -1,0 +1,100 @@
+---
+- hosts: gitlab-server
+  remote_user: admgitlab
+
+  tasks:
+
+  - name: install docker (get apt key)
+    shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    become: true
+  - name: install docker (add apt repo)
+    shell: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    become: true
+  - name: install docker (update apt repos)
+    shell: apt-get update
+    become: true
+  - name: install docker-ce package
+    shell: apt-get install -y docker-ce
+    become: true
+
+  - name: install docker-compose
+    shell: curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+    become: true
+  - name: make docker-compose executable
+    shell: chmod +x /usr/local/bin/docker-compose
+    become: true
+
+  - name: Download GitLab Omnibus install script
+    get_url:
+      url: https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh
+      dest: /etc/gitlab-ce-install.sh
+      mode: 0755
+    become: true
+
+  - name: execute gitlab-ce-install
+    shell: /etc/gitlab-ce-install.sh
+    become: true
+
+  - name: Run the equivalent of "apt-get update"
+    apt:
+      update_cache: yes
+    become: true
+
+  - name: Upgrade all packages to the latest version
+    apt:
+      name: "*"
+      force_apt_get: yes
+      state: latest
+    become: true
+
+  - name: Check "gitlab" package
+    apt:
+      name: gitlab-ce
+      force_apt_get: yes
+      state: latest
+    become: true
+
+  - name: Remove useless packages from the cache
+    apt:
+      autoclean: yes
+    become: true
+
+  - name: Remove dependencies that are no longer required
+    apt:
+      autoremove: yes
+    become: true
+
+  - name: set .ssh directory permissions
+    file:
+      path: "{{ ansible_env.HOME }}/.ssh"
+      state: directory
+      mode: 0700
+
+  - name: set authorized_keys permissions
+    file:
+      path: "{{ ansible_env.HOME }}/.ssh/authorized_keys"
+      state: file
+      mode: 0600
+
+  - name: ensure admgitlab ssh public key is allowed
+    lineinfile:
+      path: "{{ ansible_env.HOME }}/.ssh/authorized_keys"
+      line: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC83IvpDitgpEZ+BdsbOzWPngBBmlZeK2Y6a8wcidmedtf2q3QLq33LF8NHrGVSti/a2TqKBvw+DthAnnpPrjMPz+m+vb1NrzeuONCmpEsJhPIu7GFoVjcNgfMEtlahcCCracAns/pBHa0DEmDUcN1xLi8HKLxWkx8kBmLuv3qe4L82OkmeXDSzUBdfcpXKR/JC6RPxUE5juxuMSmmRh/HVogcH86lT4o1q+4UpvwtrFko+kil+cKppzbJxPO2m6eVLq/ELnemETmRLGLBTkNLKYH642u/5YpYoHcrCd0HcT8JslL+mhhi6ISIJe5uswud+iy7hbfGhicEinV4YNozX admgitlab@azure'
+
+  - name: set proper address for gitlab server
+    lineinfile:
+      path: "/etc/gitlab/gitlab.rb"
+      regexp: "^external\_url .*"
+      line: "external_url 'http://keyteo-gitlab.westeurope.cloudapp.azure.com'"
+    become: true
+
+  - name: allow runner token exposure for later configuration
+    lineinfile:
+      path: /opt/gitlab/embedded/service/gitlab-rails/lib/api/entities.rb
+      insertafter: 'password\_authentication\_enabled'
+      line: '      expose :runners_registration_token, as: :runners_registration_token'
+    become: true
+
+  - name: reconfigure gitlab
+    shell: gitlab-ctl reconfigure
+    become: true

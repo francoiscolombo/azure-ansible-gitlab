@@ -1,0 +1,7 @@
+all:
+  hosts:
+    keyteo-gitlab.westeurope.cloudapp.azure.com:
+  children:
+    gitlab-server:
+      hosts:
+        keyteo-gitlab.westeurope.cloudapp.azure.com:

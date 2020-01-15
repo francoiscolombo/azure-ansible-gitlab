@@ -1,0 +1,1 @@
+this submodule allow you to create the storage account.

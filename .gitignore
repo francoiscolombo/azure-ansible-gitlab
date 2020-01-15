@@ -1,0 +1,9 @@
+terraform/.terraform.tfstate.lock.info
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+config/azure-gitlab-server.tfvars
+config/passwords.txt
+ansible/admgitlab.rsa
+ansible/admgitlab.rsa.pub
+Presentation Azure-Terraform-Ansible.pptx
