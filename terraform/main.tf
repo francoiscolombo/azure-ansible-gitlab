@@ -1,6 +1,7 @@
 module "resource-group" {
 
-  source = "modules/resource-group"
+  #source = "modules/resource-group"
+  source = "github.com/francoiscolombo/terraform-azure-resource-group"
 
   environment = "${var.environment}"
 
@@ -11,7 +12,9 @@ module "resource-group" {
 }
 
 module "vnet" {
-  source = "modules/virtual-network"
+
+  #source = "modules/virtual-network"
+  source = "github.com/francoiscolombo/terraform-azure-virtual-network"
 
   environment    = "${module.resource-group.resource_group_environment}"
   location       = "${module.resource-group.resource_group_location}"
@@ -24,7 +27,8 @@ module "vnet" {
 
 module "subnet" {
 
-  source = "modules/subnet"
+  #source = "modules/subnet"
+  source = "github.com/francoiscolombo/terraform-azure-subnet"
 
   resource_group = "${module.resource-group.resource_group_name}"
 
@@ -37,7 +41,8 @@ module "subnet" {
 
 module "storage" {
 
-  source = "modules/storage-account"
+  #source = "modules/storage-account"
+  source = "github.com/francoiscolombo/terraform-azure-storage-account"
 
   environment    = "${module.resource-group.resource_group_environment}"
   location       = "${module.resource-group.resource_group_location}"
@@ -52,7 +57,8 @@ module "storage" {
 
 module "virtual-machines" {
 
-  source = "modules/virtual-machines"
+  #source = "modules/virtual-machines"
+  source = "github.com/francoiscolombo/terraform-azure-virtual-machines"
 
   environment    = "${module.resource-group.resource_group_environment}"
   location       = "${module.resource-group.resource_group_location}"

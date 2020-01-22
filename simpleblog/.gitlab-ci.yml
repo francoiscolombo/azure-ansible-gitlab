@@ -1,9 +1,5 @@
-variables:
-  FLASK_APP: simpleblog
-#  FLASK_ENV: development
-
 before_script:
-  - python3 --version
+  - docker info
 
 stages:
   - build
@@ -13,16 +9,14 @@ stages:
 build:
   stage: build
   tags:
-    - python
+    - docker
   script:
     - echo "Build 'Simple Blog'"
-    - python3 -m venv venv
-    - . venv/bin/activate
-    - pip3 install Flask wheel
-    - flask init-db
-    - pip3 install -e . 
-    - python3 setup.py bdist_wheel
-    - cp ./dist/simpleblog-1.0.0-py3-none-any.whl /tmp/simpleblog-1.0.0-py3-none-any.whl
+    - if [[ $( docker ps -aq | wc -l ) -gt 0 ]]; then docker rm -f $( docker ps -aq ); else echo "no containers to clean"; fi
+    - sleep 1
+    - if [[ $( docker images -q | wc -l ) -gt 0 ]]; then docker image rm -f $( docker images -q ); else echo "no images to clean"; fi
+    - sleep 1
+    - docker build --rm -t keyteo/simpleblog .
   only:
     - master
     - tags
@@ -30,17 +24,10 @@ build:
 test:
   stage: test
   tags:
-    - python
+    - docker
   script: 
     - echo "Test project"
-    - python3 -m venv venv
-    - . venv/bin/activate
-    - pip3 install --force-reinstall /tmp/simpleblog-1.0.0-py3-none-any.whl
-    - pip3 install pytest coverage
-    - pytest
-    - coverage run -m pytest 
-    - coverage report
-    - coverage html
+    - docker run --rm -t -v $( pwd )/tests:/app/tests keyteo/simpleblog sh -c ". bin/activate && pip install -e . && coverage run -m pytest && coverage report"
   only:
     - master
     - tags
@@ -48,24 +35,15 @@ test:
 deploy_staging:
   stage: deploy
   tags:
-    - python
+    - docker
   script:
     - echo "Deploy to staging server"
-    - mkdir -p /tmp/simpleblog
-    - cd "/tmp/simpleblog"
-    - python3 -m venv venv
-    - . venv/bin/activate
-    - pip3 install --force-reinstall /tmp/simpleblog-1.0.0-py3-none-any.whl
-    - pip3 install waitress
-    - flask init-db
-    - find . -name "simpleblog.sqlite" -ls
-    - echo "Simple Blog ready to execute with this command:"
-    - echo "nohup waitress-serve --url-scheme=http --listen=192.168.0.61:8071 --no-ipv6 --call simpleblog:create_app &"
-#    - sleep 5
-#    - curl -L http://192.168.0.61:8071/hello
+    - if [[ $( docker ps -aq | wc -l ) -gt 0 ]]; then docker rm -f $( docker ps -aq ); else echo "no containers to clean"; fi
+    - sleep 3
+    - docker run -p 8071:8071 -d keyteo/simpleblog sh -c ". bin/activate && pip install -e . && flask init-db && waitress-serve --url-scheme=http --listen=0.0.0.0:8071 --no-ipv6 --call simpleblog:create_app"
   environment:
     name: staging
-    url: http://192.168.0.61:8071
+    url: http://http://keyteo-gitlab.westeurope.cloudapp.azure.com:8071
   only:
     - master
     - tags

@@ -85,13 +85,3 @@ USER ansible
 
 ENTRYPOINT [ "ansible-playbook", "-i", "/ansible/platform.yml", "-u", "admgitlab", "--private-key", "/ansible/.ssh/admgitlab.rsa" ]
 CMD [ "/ansible/playbooks/gitlab-install-playbook.yml" ]
-
-# build with:
-# docker build -t keyteo/gitlab/ansible .
-
-# run with:
-# docker run --rm -it keyteo/gitlab/ansible
-# (which is going to use the gitlab-install-playbook by default)
-# or
-# docker run -e GITLAB_USER_PASSWORD=<password> -e GITLAB_ROOT_PASSWORD=<password> --rm -it keyteo/gitlab/ansible /ansible/playbooks/gitlab-config-playbook.yml
-# to use the config playbook.

@@ -47,6 +47,13 @@
       state: latest
     become: true
 
+  - name: Check "python3-venv" package
+    apt:
+      name: python3-venv
+      force_apt_get: yes
+      state: latest
+    become: true
+
   - name: Check "gitlab" package
     apt:
       name: gitlab-ce
@@ -97,4 +104,11 @@
 
   - name: reconfigure gitlab
     shell: gitlab-ctl reconfigure
+    become: true
+
+  - name: adding user 'gitlab-runner' to group docker
+    user:
+      name: 'gitlab-runner'
+      groups: docker
+      append: yes
     become: true

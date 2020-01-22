@@ -98,6 +98,18 @@ resource "azurerm_network_security_group" "nsg" {
     destination_port_range      = "80"
   }
 
+  security_rule {
+    name                        = "${var.name_prefix}-rule-in-${lookup(var.servers[count.index], "name_http2_rule")}"
+    priority                    = 140
+    direction                   = "Inbound"
+    access                      = "Allow"
+    protocol                    = "Tcp"
+    source_address_prefix       = "*"
+    source_port_range           = "*"
+    destination_address_prefix  = "*"
+    destination_port_range      = "8071"
+  }
+
   tags {
     environment="${var.environment}"
   }

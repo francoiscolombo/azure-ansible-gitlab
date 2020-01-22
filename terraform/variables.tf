@@ -76,7 +76,7 @@ variable "image_version" {
 variable "servers" {
   description = "list of public servers to create in the infrastructure"
   type = "list"
-   default = [
+  default = [
     {
       name = "0"
       private_ip = "10.10.10.10"
@@ -86,6 +86,7 @@ variable "servers" {
       name_ssh_rule = "ssh-0"
       name_https_rule = "https-0"
       name_http_rule = "http-0"
+      name_http2_rule = "http-1"
       name_rsync_rule = "rsync-0"
 
       pip_name = "keyteo-azure-gitlab-pip"
